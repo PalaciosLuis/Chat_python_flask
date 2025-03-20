@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interno</title>
+    <!-- Enlace de Bootstrap para diseño -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.1/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        /* Estilos (igual que antes) */
+        body {
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .chat-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+        }
+
+        #message-input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .send-button {
+            width: 100px;
+            padding: 10px;
+            border-radius: 4px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+
+        .send-button:hover {
+            background-color: #218838;
+        }
+
+        .emoji-button {
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 20px;
+            color: #28a745;
+        }
+
+        .notification {
+            display: none;
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Botón de Logout -->
+<div class="d-flex justify-content-end">
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger m-3">Cerrar sesión</a>
+</div>
+<!-- Contenedor del Chat -->
+<div class="chat-container">
+    <div id="chat-box"></div>
+    <div class="d-flex justify-content-between align-items-center p-3">
+        <!-- Emoji Button -->
+        <button class="emoji-button" onclick="toggleEmojiPanel()">
+            <i class="bx bx-smile"></i> Emojis
+        </button>
+
+        <!-- Input Message -->
+        <input type="text" id="message-input" class="form-control" placeholder="Escribe tu mensaje" />
+
+        <!-- Send Button -->
+        <button class="send-button" onclick="sendMessage()">Enviar</button>
+    </div>
+
+    <!-- Emoji Panel -->
+    <div id="emoji-panel" class="emoji-panel">
+        <!-- Emojis se cargarán dinámicamente -->
+    </div>
+</div>
+
+
+<!-- Notificación de Mensaje -->
+<div id="notification" class="notification"></div>
+
+<!-- Agregar el audio de notificación -->
+<audio id="notification-sound" src="../static/audio/livechat-129007.mp3" preload="auto"></audio>
+
+<!-- Enlace de Socket.io -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+
+<script>
+    // Conectar al servidor SocketIO
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    // Recuperar los mensajes del almacenamiento local y mostrarlos al cargar la página
+    window.onload = function() {
+        loadMessagesFromCache();
+    }
+
+    // Recibir los mensajes y agregarlos al chat
+    socket.on('message', function(msg) {
+        addMessageToChat(msg);
+        saveMessageToCache(msg);  // Guardar en cache al recibir un mensaje
+    });
+
+    // Función para enviar un mensaje
+    function sendMessage() {
+        var message = document.getElementById('message-input').value;
+        if (message.trim() !== "") {  // Verificar si el mensaje no está vacío
+            socket.send(message);
+            document.getElementById('message-input').value = '';  // Limpiar el campo de entrada
+        }
+    }
+
+    // Función para agregar un mensaje al chat
+    function addMessageToChat(msg) {
+        var chatBox = document.getElementById('chat-box');
+        var messageElement = document.createElement('p');
+        messageElement.textContent = msg;  // El mensaje incluirá el nombre del usuario
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;  // Desplazar hacia abajo automáticamente
+    }
+
+    // Función para guardar un mensaje en el almacenamiento local (localStorage)
+    function saveMessageToCache(msg) {
+        var messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+        messages.push(msg);
+        localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+
+    // Función para cargar mensajes desde el almacenamiento local al cargar la página
+    function loadMessagesFromCache() {
+        var messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+        messages.forEach(function(msg) {
+            addMessageToChat(msg);
+        });
+    }
+
+    // Función para mostrar/ocultar el panel de emojis
+    function toggleEmojiPanel() {
+        var panel = document.getElementById('emoji-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+
+        if (panel.style.display === 'block') {
+            loadEmojis(); // Cargar emojis cuando se abre el panel
+        }
+    }
+
+    // Función para insertar un emoji en el campo de mensaje
+    function insertEmoji(emoji) {
+        var input = document.getElementById('message-input');
+        input.value += emoji;
+        toggleEmojiPanel();  // Cerrar el panel después de insertar el emoji
+    }
+
+    // Función para cargar emojis y mostrarlos en el panel
+    function loadEmojis() {
+        const emojiPanel = document.getElementById('emoji-panel');
+        const emojis = ['😊', '😂', '😍', '😎', '😢', '😜', '😉', '😇', '🥺', '😈'];  // Lista de emojis
+
+        emojiPanel.innerHTML = '';  // Limpiar el panel antes de agregar nuevos emojis
+
+        emojis.forEach(emoji => {
+            const emojiButton = document.createElement('span');
+            emojiButton.textContent = emoji;
+            emojiButton.style.cursor = 'pointer';
+            emojiButton.classList.add('mx-1');
+            emojiButton.onclick = function() {
+                insertEmoji(emoji);
+            };
+            emojiPanel.appendChild(emojiButton);
+        });
+    }
+
+    // Detectar cuando se presiona Enter y enviar el mensaje
+    document.getElementById('message-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>

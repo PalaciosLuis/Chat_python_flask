@@ -1,0 +1,38 @@
+# 🛑 Ignorar la carpeta del entorno virtual
+venv/
+.env
+
+# 🛑 Archivos de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 🛑 Archivos de base de datos SQLite (si usas)
+*.sqlite3
+*.db
+
+# 🛑 Configuración de logs y caché
+*.log
+logs/
+*.pid
+*.seed
+instance/
+
+# 🛑 Configuración de IDEs y editores
+.vscode/
+.idea/
+*.iml
+
+# 🛑 Archivos generados por dependencias de Python
+dist/
+build/
+*.egg-info/
+
+# 🛑 Ignorar archivos de migraciones si no los quieres versionar
+migrations/
+
+# 🛑 Dependencias instaladas con pip
+__pycache__/
+*.pyc
+*.pyo
